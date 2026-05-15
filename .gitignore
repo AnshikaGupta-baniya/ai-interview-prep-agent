@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Environment variables — NEVER commit these
+.env
+*.env
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+
+# ChromaDB local data
+chroma_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
