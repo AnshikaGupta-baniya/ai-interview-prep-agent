@@ -6,7 +6,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # Groq (free LLM)
     groq_api_key: str
-    llm_model: str = "llama-3.1-70b-versatile"
+    llm_model: str = "llama-3.3-70b-versatile"
     max_tokens_per_request: int = 2000
 
     # OpenAI (optional - for embeddings only)
