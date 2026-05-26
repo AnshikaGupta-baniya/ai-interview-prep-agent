@@ -1,34 +1,33 @@
 import chromadb
-
-from chromadb.config import Settings
 from functools import lru_cache
-from pathlib import Path
-
-
-CHROMA_DATA_PATH = str(
-    Path(__file__).parent.parent.parent / "chroma_data"
-)
+from app.config import get_settings
 
 
 @lru_cache()
-def get_chroma_client():
+def get_chroma_client() -> chromadb.Client:
+    """
+    Production: EphemeralClient (in-memory)
+    Development: PersistentClient (local disk)
 
-    return chromadb.PersistentClient(
-        path=CHROMA_DATA_PATH,
-        settings=Settings(
-            anonymized_telemetry=False
-        )
-    )
+    WHY: Railway free tier has no persistent disk.
+    Vectors are rebuilt on each resume upload — acceptable
+    because resume uploads are infrequent and fast.
+
+    For true production: migrate to Pinecone (we cover in Phase 8)
+    """
+    settings = get_settings()
+
+    if settings.environment == "production":
+        return chromadb.EphemeralClient()
+    else:
+        from pathlib import Path
+        path = str(Path(__file__).parent.parent.parent / "chroma_data")
+        return chromadb.PersistentClient(path=path)
 
 
-def get_or_create_collection(resume_id: str):
-
+def get_or_create_collection(resume_id: str) -> chromadb.Collection:
     client = get_chroma_client()
-
-    collection_name = (
-        f"resume_{resume_id.replace('-', '_')}"
-    )
-
+    collection_name = f"resume_{resume_id.replace('-', '_')}"
     return client.get_or_create_collection(
         name=collection_name,
         metadata={"hnsw:space": "cosine"}
