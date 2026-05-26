@@ -1,67 +1,63 @@
 import tiktoken
 import uuid
 import asyncio
-
-from sentence_transformers import SentenceTransformer
-
+from fastembed import TextEmbedding
 from app.db.chroma import get_or_create_collection
+from app.models.resume import ParsedResume
 from app.config import get_settings
 
+# FastEmbed — lightweight quantized model
+# Uses ~50MB vs sentence-transformers ~500MB
+# Perfect for Render free tier
 _model = None
 
 
-def get_embedding_model():
+def get_embedding_model() -> TextEmbedding:
     global _model
-
     if _model is None:
-        print("Loading embedding model...")
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-        print("Embedding model ready.")
-
+        print("Loading FastEmbed model...")
+        _model = TextEmbedding(
+            model_name="BAAI/bge-small-en-v1.5"  # only 33MB
+        )
+        print("FastEmbed model ready.")
     return _model
 
 
-async def get_local_embedding(text):
+async def get_local_embedding(text: str) -> list[float]:
+    """
+    Runs FastEmbed in thread pool so it doesn't block FastAPI.
+    Returns 384-dimensional vector.
+    """
     loop = asyncio.get_event_loop()
-
     model = get_embedding_model()
-
     vector = await loop.run_in_executor(
         None,
-        lambda: model.encode(
-            text,
-            normalize_embeddings=True
-        ).tolist()
+        lambda: list(list(model.embed([text]))[0])
     )
-
     return vector
 
 
-def chunk_resume(parsed, chunk_size=512, overlap=100):
-
+def chunk_resume(
+    parsed: ParsedResume,
+    chunk_size: int = 512,
+    overlap: int = 100,
+) -> list[dict]:
     enc = tiktoken.encoding_for_model("gpt-4o")
-
     chunks = []
 
     for exp in parsed.work_experiences:
-
-        responsibilities = "; ".join(exp.responsibilities)
-        achievements = "; ".join(exp.achievements)
-        technologies = ", ".join(exp.technologies)
-
         text = (
             f"Company: {exp.company}\n"
             f"Role: {exp.role}\n"
             f"Duration: {exp.start_date or 'N/A'} to {exp.end_date or 'Present'}\n"
-            f"Responsibilities: {responsibilities}\n"
-            f"Achievements: {achievements}\n"
-            f"Technologies: {technologies}"
+            f"Responsibilities: {'; '.join(exp.responsibilities)}\n"
+            f"Achievements: {'; '.join(exp.achievements)}\n"
+            f"Technologies: {', '.join(exp.technologies)}"
         )
 
         tokens = enc.encode(text)
 
         if len(tokens) <= chunk_size:
-
             chunks.append({
                 "id": str(uuid.uuid4()),
                 "text": text,
@@ -71,15 +67,10 @@ def chunk_resume(parsed, chunk_size=512, overlap=100):
                     "type": "work_experience",
                 },
             })
-
         else:
-
             for i in range(0, len(tokens), chunk_size - overlap):
-
-                sub_tokens = tokens[i:i + chunk_size]
-
+                sub_tokens = tokens[i: i + chunk_size]
                 sub_text = enc.decode(sub_tokens)
-
                 chunks.append({
                     "id": str(uuid.uuid4()),
                     "text": sub_text,
@@ -91,12 +82,9 @@ def chunk_resume(parsed, chunk_size=512, overlap=100):
                 })
 
     if parsed.skills:
-
         skill_text = f"Skills: {', '.join(parsed.skills)}"
-
         if parsed.summary:
             skill_text = f"Summary: {parsed.summary}\n" + skill_text
-
         chunks.append({
             "id": str(uuid.uuid4()),
             "text": skill_text,
@@ -110,24 +98,18 @@ def chunk_resume(parsed, chunk_size=512, overlap=100):
     return chunks
 
 
-async def embed_and_index(resume_id, parsed):
-
+async def embed_and_index(resume_id: str, parsed: ParsedResume) -> int:
     settings = get_settings()
-
     chunks = chunk_resume(
         parsed,
         chunk_size=settings.chunk_size_tokens,
         overlap=settings.chunk_overlap_tokens,
     )
-
     collection = get_or_create_collection(resume_id)
 
     embeddings = []
-
     for chunk in chunks:
-
         vector = await get_local_embedding(chunk["text"])
-
         embeddings.append(vector)
 
     collection.upsert(
@@ -136,5 +118,4 @@ async def embed_and_index(resume_id, parsed):
         documents=[c["text"] for c in chunks],
         metadatas=[c["metadata"] for c in chunks],
     )
-
     return len(chunks)
