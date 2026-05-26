@@ -72,6 +72,7 @@ export interface EvaluationResponse {
 }
 
 export interface SessionSummary {
+  id: string;
   session_id: string;
   target_role: string;
   seniority: string;
@@ -79,4 +80,30 @@ export interface SessionSummary {
   avg_score: number | null;
   status: string;
   created_at: string;
+}
+export interface QAPair {
+  sequence_number: number;
+  question_id: string;
+  question_text: string;
+  question_type: string;
+  is_followup: boolean;
+  transcript: string;
+  scores: {
+    situation: number;
+    task: number;
+    action: number;
+    result: number;
+    relevance: number;
+  };
+  overall_score: number;
+  strengths: string;
+  gaps: string;
+  ideal_answer: string;
+  coaching_tip: string;
+  weak_dimension: string;
+}
+
+export interface SessionDetail {
+  session: SessionSummary;
+  qa_pairs: QAPair[];
 }

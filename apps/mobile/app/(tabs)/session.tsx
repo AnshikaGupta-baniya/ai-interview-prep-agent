@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'expo-router';
+import { useState, useRef, useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Audio } from 'expo-av';
 
 import { useThemeStore } from '../../store/useThemeStore';
@@ -27,7 +27,7 @@ export default function SessionScreen() {
   const {
     sessionId, targetRole, seniority,
     currentQuestion, questionNumber, totalQuestions,
-    setQuestion, setEvaluation, setTranscript, transcript,
+    setQuestion, setEvaluation, setTranscript,
   } = useSessionStore();
 
   const isDark = theme === 'dark';
@@ -41,50 +41,66 @@ export default function SessionScreen() {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const waveInterval = useRef<any>(null);
   const timerInterval = useRef<any>(null);
+  const isLoadingRef = useRef(false);
 
-  // Load question on mount
-  useEffect(() => {
-    if (sessionId) loadNextQuestion();
-  }, [sessionId]);
+  // Reset and reload every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (sessionId && !isLoadingRef.current) {
+        setPhase('loading_question');
+        setEditableTranscript('');
+        setRecordingDuration(0);
+        loadNextQuestion();
+      }
 
-  // Animate waveform
-  useEffect(() => {
-    if (phase === 'recording') {
-      waveInterval.current = setInterval(() => {
-        setWaveHeights(
-          Array(16).fill(0).map(() => Math.floor(Math.random() * 28) + 4)
-        );
-      }, 120);
-      timerInterval.current = setInterval(() => {
-        setRecordingDuration(d => d + 1);
-      }, 1000);
-    } else {
-      clearInterval(waveInterval.current);
-      clearInterval(timerInterval.current);
-      setWaveHeights(Array(16).fill(4));
-      setRecordingDuration(0);
-    }
-    return () => {
-      clearInterval(waveInterval.current);
-      clearInterval(timerInterval.current);
-    };
-  }, [phase]);
+      return () => {
+        // Cleanup on blur
+        clearInterval(waveInterval.current);
+        clearInterval(timerInterval.current);
+      };
+    }, [sessionId, questionNumber])
+  );
 
   const loadNextQuestion = async () => {
-    if (!sessionId) return;
+    if (!sessionId || isLoadingRef.current) return;
+    isLoadingRef.current = true;
     setPhase('loading_question');
+
     try {
       const question = await sessionService.generateQuestion(sessionId);
       setQuestion(question);
       setPhase('question_ready');
     } catch (err: any) {
-      Alert.alert('Error', 'Could not generate question. Is the backend running?');
+      Alert.alert(
+        'Error',
+        'Could not generate question. Is the backend running?'
+      );
+    } finally {
+      isLoadingRef.current = false;
     }
+  };
+
+  // Waveform animation
+  const startWaveAnimation = () => {
+    waveInterval.current = setInterval(() => {
+      setWaveHeights(
+        Array(16).fill(0).map(() => Math.floor(Math.random() * 28) + 4)
+      );
+    }, 120);
+    timerInterval.current = setInterval(() => {
+      setRecordingDuration(d => d + 1);
+    }, 1000);
+  };
+
+  const stopWaveAnimation = () => {
+    clearInterval(waveInterval.current);
+    clearInterval(timerInterval.current);
+    setWaveHeights(Array(16).fill(4));
+    setRecordingDuration(0);
   };
 
   const handleStartRecording = async () => {
     try {
-      // Request microphone permission
       const { granted } = await Audio.requestPermissionsAsync();
       if (!granted) {
         Alert.alert(
@@ -94,19 +110,18 @@ export default function SessionScreen() {
         return;
       }
 
-      // Configure audio session
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
-      // Start recording
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
 
       recordingRef.current = recording;
       setPhase('recording');
+      startWaveAnimation();
 
     } catch (err: any) {
       Alert.alert('Recording error', err.message || 'Could not start recording.');
@@ -115,20 +130,18 @@ export default function SessionScreen() {
 
   const handleStopRecording = async () => {
     if (!recordingRef.current) return;
+    stopWaveAnimation();
     setPhase('transcribing');
 
     try {
-      // Stop and unload recording
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
       if (!uri) throw new Error('No audio file found.');
 
-      // Reset audio mode
       await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
-      // Send to backend for Whisper transcription
       const result = await sessionService.transcribe(
         uri,
         currentQuestion!.question_id
@@ -139,7 +152,10 @@ export default function SessionScreen() {
       setPhase('transcript_review');
 
     } catch (err: any) {
-      Alert.alert('Transcription error', err.message || 'Could not transcribe audio.');
+      Alert.alert(
+        'Transcription error',
+        err.message || 'Could not transcribe audio.'
+      );
       setPhase('question_ready');
     }
   };
@@ -161,9 +177,12 @@ export default function SessionScreen() {
         editableTranscript,
       );
       setEvaluation(evaluation);
-      router.push('/(tabs)/feedback');
+      router.replace('/(tabs)/feedback');
     } catch (err: any) {
-      Alert.alert('Evaluation error', err.message || 'Could not evaluate answer.');
+      Alert.alert(
+        'Evaluation error',
+        err.message || 'Could not evaluate answer.'
+      );
       setPhase('transcript_review');
     }
   };
@@ -174,13 +193,15 @@ export default function SessionScreen() {
     return `${m}:${s}`;
   };
 
-  // No session
+  // No session — prompt user
   if (!sessionId) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: c.bg }]}>
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🎯</Text>
-          <Text style={[styles.emptyTitle, { color: c.text }]}>No active session</Text>
+          <Text style={[styles.emptyTitle, { color: c.text }]}>
+            No active session
+          </Text>
           <Text style={[styles.emptySub, { color: c.text2 }]}>
             Go to Home, upload your resume and tap Start Practice Session.
           </Text>
@@ -229,6 +250,7 @@ export default function SessionScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+
         {/* Loading question */}
         {phase === 'loading_question' && (
           <View style={styles.centered}>
@@ -298,8 +320,11 @@ export default function SessionScreen() {
             <View style={[styles.transcriptHeader, {
               backgroundColor: isDark ? Colors.indigo.dim : '#EDE9F8'
             }]}>
-              <Ionicons name="checkmark-circle" size={16}
-                color={isDark ? Colors.lavender : Colors.indigo.DEFAULT} />
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={isDark ? Colors.lavender : Colors.indigo.DEFAULT}
+              />
               <Text style={[styles.transcriptLabel, {
                 color: isDark ? Colors.lavender : Colors.indigo.DEFAULT
               }]}>
@@ -348,16 +373,18 @@ export default function SessionScreen() {
       {/* Bottom action area */}
       <View style={styles.bottomArea}>
 
-        {/* Mic button — ready or recording */}
         {(phase === 'question_ready' || phase === 'recording') && (
           <View style={styles.micSection}>
             <TouchableOpacity
-              onPress={phase === 'recording'
-                ? handleStopRecording
-                : handleStartRecording}
+              onPress={
+                phase === 'recording'
+                  ? handleStopRecording
+                  : handleStartRecording
+              }
               style={[styles.micRing, {
                 borderColor: phase === 'recording'
-                  ? Colors.terra.DEFAULT : c.border,
+                  ? Colors.terra.DEFAULT
+                  : c.border,
                 backgroundColor: phase === 'recording'
                   ? (isDark ? Colors.terra.dim : '#FBF0ED')
                   : c.surf2,
@@ -381,7 +408,6 @@ export default function SessionScreen() {
           </View>
         )}
 
-        {/* Submit button — transcript review */}
         {phase === 'transcript_review' && (
           <TouchableOpacity
             style={[styles.submitBtn, { backgroundColor: Colors.terra.DEFAULT }]}
@@ -409,7 +435,10 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  progressBg: { height: 3, marginHorizontal: 20, borderRadius: 2, marginBottom: 20 },
+  progressBg: {
+    height: 3, marginHorizontal: 20,
+    borderRadius: 2, marginBottom: 20,
+  },
   progressFill: {
     height: '100%', borderRadius: 2,
     backgroundColor: Colors.indigo.DEFAULT,
@@ -426,7 +455,7 @@ const styles = StyleSheet.create({
   questionText: { fontSize: 16, lineHeight: 26, fontWeight: '500' },
   hint: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
   recordingWrap: { alignItems: 'center', gap: 12, marginTop: 8 },
-  timer: { fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  timer: { fontSize: 16, fontWeight: '600' },
   waveRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 3, height: 48,
@@ -434,8 +463,7 @@ const styles = StyleSheet.create({
   waveBar: { width: 4, borderRadius: 2 },
   transcriptHeader: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 8, padding: 10, borderRadius: 10,
-    marginBottom: 10,
+    gap: 8, padding: 10, borderRadius: 10, marginBottom: 10,
   },
   transcriptLabel: { fontSize: 13, fontWeight: '600' },
   transcriptInput: {
@@ -448,7 +476,9 @@ const styles = StyleSheet.create({
     gap: 6, marginTop: 10, alignSelf: 'center',
   },
   rerecordText: { fontSize: 13 },
-  bottomArea: { paddingHorizontal: 20, paddingBottom: 32, paddingTop: 8 },
+  bottomArea: {
+    paddingHorizontal: 20, paddingBottom: 32, paddingTop: 8,
+  },
   micSection: { alignItems: 'center', gap: 8 },
   micRing: {
     width: 80, height: 80, borderRadius: 40,
@@ -460,8 +490,7 @@ const styles = StyleSheet.create({
   },
   micHint: { fontSize: 12 },
   submitBtn: {
-    borderRadius: 14, padding: 16,
-    alignItems: 'center',
+    borderRadius: 14, padding: 16, alignItems: 'center',
   },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   empty: {
@@ -474,6 +503,8 @@ const styles = StyleSheet.create({
     fontSize: 14, textAlign: 'center',
     lineHeight: 22, marginBottom: 24,
   },
-  homeBtn: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  homeBtn: {
+    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
+  },
   homeBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

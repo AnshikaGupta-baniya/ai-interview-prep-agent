@@ -1,4 +1,4 @@
-import asyncio
+﻿content = """import asyncio
 from sentence_transformers import SentenceTransformer
 from app.db.chroma import get_or_create_collection
 
@@ -112,3 +112,8 @@ def build_retrieval_query(
     }
     keywords = type_keywords.get(question_type, "experience skills achievements")
     return f"{target_role} {keywords}"
+"""
+
+with open("app/services/retriever.py", "w", encoding="utf-8") as f:
+    f.write(content)
+print("retriever.py updated")

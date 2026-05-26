@@ -9,22 +9,45 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 
 import { useThemeStore } from '../../store/useThemeStore';
 import { useResumeStore } from '../../store/useResumeStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
+import { sessionService } from '../../services/sessionService';
 import { Colors } from '../../constants/theme';
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
+  // Theme Store
   const { theme } = useThemeStore();
 
+  // Resume Store
   const { resume, clearResume } = useResumeStore();
 
+  // Auth Store
+  const { user, logout } = useAuthStore();
+
+  // Local State
+  const [sessions, setSessions] = useState<any[]>([]);
+
+  // Theme Helpers
   const isDark = theme === 'dark';
 
   const c = isDark
     ? Colors.dark
     : Colors.light;
+
+  // Fetch session history
+  useEffect(() => {
+    sessionService
+      .getHistory(user?.id || 'anonymous')
+      .then(setSessions)
+      .catch(console.log);
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -38,13 +61,12 @@ export default function ProfileScreen() {
         {
           text: 'Log out',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             clearResume();
 
-            Alert.alert(
-              'Logged out',
-              'See you next time!'
-            );
+            await logout();
+
+            router.replace('/auth');
           },
         },
       ]
@@ -84,8 +106,7 @@ export default function ProfileScreen() {
             style={[
               styles.avatar,
               {
-                backgroundColor:
-                  Colors.indigo.DEFAULT,
+                backgroundColor: Colors.indigo.DEFAULT,
               },
             ]}
           >
@@ -101,8 +122,7 @@ export default function ProfileScreen() {
                 { color: c.text },
               ]}
             >
-              {resume?.parsed_json?.full_name ||
-                'Anshika Gupta'}
+              {resume?.parsed_json?.full_name || 'Anshika Gupta'}
             </Text>
 
             <Text
@@ -111,8 +131,7 @@ export default function ProfileScreen() {
                 { color: c.text2 },
               ]}
             >
-              {resume?.parsed_json?.email ||
-                'anshika@example.com'}
+              {resume?.parsed_json?.email || 'anshika@example.com'}
             </Text>
 
             {resume && (
@@ -142,8 +161,7 @@ export default function ProfileScreen() {
                     },
                   ]}
                 >
-                  Resume uploaded ·{' '}
-                  {resume.chunk_count} chunks
+                  Resume uploaded · {resume.chunk_count} chunks
                 </Text>
               </View>
             )}
@@ -216,6 +234,19 @@ export default function ProfileScreen() {
               styles.row,
               { borderBottomWidth: 0 },
             ]}
+            onPress={() => {
+              if (sessions.length > 0) {
+                router.push({
+                  pathname: '/session-detail',
+                  params: { sessionId: sessions[0].id },
+                });
+              } else {
+                Alert.alert(
+                  'No sessions',
+                  'Complete a practice session first.'
+                );
+              }
+            }}
           >
             <View
               style={[
@@ -339,8 +370,7 @@ export default function ProfileScreen() {
               style={[
                 styles.rowLabel,
                 {
-                  color:
-                    Colors.terra.DEFAULT,
+                  color: Colors.terra.DEFAULT,
                 },
               ]}
             >
@@ -354,6 +384,112 @@ export default function ProfileScreen() {
             />
           </TouchableOpacity>
 
+        </View>
+
+        {/* Recent Sessions */}
+        <Text
+          style={[
+            styles.sectionLabel,
+            { color: c.text3 },
+          ]}
+        >
+          RECENT SESSIONS
+        </Text>
+
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: c.surf,
+              borderColor: c.border,
+            },
+          ]}
+        >
+          {sessions.length === 0 ? (
+            <View
+              style={{
+                padding: 16,
+                alignItems: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  color: c.text3,
+                  fontSize: 13,
+                }}
+              >
+                No sessions yet
+              </Text>
+            </View>
+          ) : (
+            sessions.slice(0, 3).map((session, i) => (
+              <View
+                key={session.id}
+                style={[
+                  styles.row,
+                  {
+                    borderBottomWidth: i < 2 ? 1 : 0,
+                    borderBottomColor: c.border,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.iconWrap,
+                    {
+                      backgroundColor: isDark
+                        ? Colors.indigo.dim
+                        : '#EDE9F8',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="bar-chart-outline"
+                    size={18}
+                    color={
+                      isDark
+                        ? Colors.lavender
+                        : Colors.indigo.DEFAULT
+                    }
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.rowLabel,
+                      { color: c.text },
+                    ]}
+                  >
+                    {session.seniority} {session.target_role}
+                  </Text>
+
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: c.text3,
+                      marginTop: 1,
+                    }}
+                  >
+                    {session.total_questions} questions
+                  </Text>
+                </View>
+
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color:
+                      (session.avg_score || 0) >= 4
+                        ? '#2ECC9A'
+                        : Colors.terra.DEFAULT,
+                  }}
+                >
+                  {session.avg_score?.toFixed(1) || '—'}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Version */}

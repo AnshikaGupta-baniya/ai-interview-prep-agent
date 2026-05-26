@@ -1,8 +1,6 @@
-import uuid
+﻿content = """import uuid
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, HTTPException
-
 from app.db.supabase import get_supabase
 from app.models.question import QuestionGenerateRequest, QuestionGenerateResponse
 from app.services.retriever import retrieve_diverse_chunk, build_retrieval_query
@@ -15,71 +13,29 @@ router = APIRouter(prefix="/question", tags=["Question"])
 async def generate_question_endpoint(req: QuestionGenerateRequest):
     supabase = get_supabase()
 
-    # Get current session
-    session = supabase.table("sessions").select("*").eq(
-        "id",
-        req.session_id
-    ).execute()
+    # Get session details
+    session = supabase.table("sessions").select(
+        "id, resume_id, target_role, seniority, question_type, total_questions"
+    ).eq("id", req.session_id).execute()
 
     if not session.data:
         raise HTTPException(status_code=404, detail="Session not found.")
 
     s = session.data[0]
 
-    # Get all sessions for this resume to avoid repeating questions
-    user_sessions = supabase.table("sessions").select("id").eq(
-        "resume_id",
-        s["resume_id"]
-    ).execute()
-
-    all_session_ids = [
-        sess["id"]
-        for sess in (user_sessions.data or [])
-    ]
-
-    # Get all questions asked across all sessions for this resume
+    # Get all questions already asked in this session
+    # to know which chunks have been used
     asked = supabase.table("questions").select(
-        "resume_chunk, question_text, sequence_number"
-    ).in_(
-        "session_id",
-        all_session_ids
-    ).execute()
-
-    used_chunks = [
-        q["resume_chunk"]
-        for q in (asked.data or [])
-        if q.get("resume_chunk")
-    ]
-
-    used_questions = [
-        q["question_text"].lower().strip()
-        for q in (asked.data or [])
-        if q.get("question_text")
-    ]
-
-    # Get questions already asked in this current session
-    current_session_asked = supabase.table("questions").select(
         "resume_chunk, sequence_number"
-    ).eq(
-        "session_id",
-        req.session_id
-    ).execute()
+    ).eq("session_id", req.session_id).execute()
 
-    current_session_chunks = [
-        q["resume_chunk"]
-        for q in (current_session_asked.data or [])
-        if q.get("resume_chunk")
-    ]
+    used_chunks = [q["resume_chunk"] for q in (asked.data or [])]
 
     # Get last evaluation score to decide follow-up vs new chunk
     last_eval = supabase.table("evaluations").select(
         "overall_score, weak_dimension"
-    ).eq(
-        "session_id",
-        req.session_id
-    ).order(
-        "created_at",
-        desc=True
+    ).eq("session_id", req.session_id).order(
+        "created_at", desc=True
     ).limit(1).execute()
 
     last_score = None
@@ -89,28 +45,18 @@ async def generate_question_endpoint(req: QuestionGenerateRequest):
     if last_eval.data:
         last_score = last_eval.data[0]["overall_score"]
         weak_dimension = last_eval.data[0]["weak_dimension"]
-
-        # Only follow up if score is genuinely weak
+        # Only follow up if score is genuinely weak (< 3)
         should_followup = last_score < 3 and req.is_followup
 
-    # Question type rotation
+    # Question type rotation — assess different skills
     question_type_rotation = [
-        "behavioural",
-        "technical",
-        "situational",
-        "behavioural",
-        "technical",
-        "situational",
-        "behavioural",
-        "technical",
-        "situational",
+        "behavioural", "technical", "situational",
+        "behavioural", "technical", "situational",
+        "behavioural", "technical", "situational",
         "behavioural",
     ]
-
     sequence = s["total_questions"]
-    question_type = question_type_rotation[
-        sequence % len(question_type_rotation)
-    ]
+    question_type = question_type_rotation[sequence % len(question_type_rotation)]
 
     # Build retrieval query
     query = build_retrieval_query(
@@ -119,9 +65,9 @@ async def generate_question_endpoint(req: QuestionGenerateRequest):
         exclude_chunks=used_chunks if not should_followup else [],
     )
 
-    # Retrieve chunk
-    if should_followup and current_session_chunks:
-        resume_chunk = current_session_chunks[-1]
+    # Retrieve chunk — diverse if moving forward, same if following up
+    if should_followup and used_chunks:
+        resume_chunk = used_chunks[-1]  # reuse last chunk for follow-up
     else:
         resume_chunk = await retrieve_diverse_chunk(
             resume_id=s["resume_id"],
@@ -137,7 +83,6 @@ async def generate_question_endpoint(req: QuestionGenerateRequest):
         question_type=question_type,
         is_followup=should_followup,
         weak_dimension=weak_dimension if should_followup else None,
-        used_questions=used_questions,
     )
 
     # Save question
@@ -158,10 +103,7 @@ async def generate_question_endpoint(req: QuestionGenerateRequest):
 
     supabase.table("sessions").update({
         "total_questions": new_sequence
-    }).eq(
-        "id",
-        req.session_id
-    ).execute()
+    }).eq("id", req.session_id).execute()
 
     return QuestionGenerateResponse(
         question_id=question_id,
@@ -170,3 +112,8 @@ async def generate_question_endpoint(req: QuestionGenerateRequest):
         question_type=question_type,
         is_followup=should_followup,
     )
+"""
+
+with open("app/api/question.py", "w", encoding="utf-8") as f:
+    f.write(content)
+print("question.py updated")

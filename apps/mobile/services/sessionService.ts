@@ -3,7 +3,8 @@ import {
   SessionStartResponse,
   QuestionResponse,
   EvaluationResponse,
-  SessionSummary
+  SessionSummary,
+  QAPair,
 } from '../types';
 
 export const sessionService = {
@@ -20,6 +21,7 @@ export const sessionService = {
       seniority: seniority.toLowerCase(),
       question_type: questionType,
     });
+
     return res.data;
   },
 
@@ -33,6 +35,7 @@ export const sessionService = {
       is_followup: isFollowup,
       weak_dimension: weakDimension,
     });
+
     return res.data;
   },
 
@@ -41,16 +44,22 @@ export const sessionService = {
     questionId: string
   ): Promise<{ transcript: string; confidence: number }> => {
     const formData = new FormData();
+
     formData.append('audio_file', {
       uri: audioUri,
       name: 'answer.m4a',
       type: 'audio/m4a',
     } as any);
+
     formData.append('question_id', questionId);
 
     const res = await api.post('/answer/transcribe', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'ngrok-skip-browser-warning': 'true',
+      },
     });
+
     return res.data;
   },
 
@@ -64,11 +73,26 @@ export const sessionService = {
       session_id: sessionId,
       transcript,
     });
+
     return res.data;
   },
 
-  getHistory: async (userId: string = 'anonymous'): Promise<SessionSummary[]> => {
+  getHistory: async (
+    userId: string = 'anonymous'
+  ): Promise<SessionSummary[]> => {
     const res = await api.get(`/session/history?user_id=${userId}`);
+
+    return res.data;
+  },
+
+  getSessionDetail: async (
+    sessionId: string
+  ): Promise<{
+    session: SessionSummary;
+    qa_pairs: QAPair[];
+  }> => {
+    const res = await api.get(`/session/${sessionId}/detail`);
+
     return res.data;
   },
 

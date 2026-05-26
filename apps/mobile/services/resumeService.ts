@@ -19,7 +19,7 @@ export const resumeService = {
     formData.append('user_id', userId);
 
     const res = await api.post('/resume/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' , 'ngrok-skip-browser-warning': 'true', },
     });
 
     return res.data;

@@ -11,6 +11,7 @@ async def generate_question(
     question_type: str,
     is_followup: bool = False,
     weak_dimension: str = None,
+    used_questions: list = None,
 ) -> str:
     messages = build_question_prompt(
         resume_chunk=resume_chunk,
@@ -19,6 +20,7 @@ async def generate_question(
         question_type=question_type,
         is_followup=is_followup,
         weak_dimension=weak_dimension,
+        used_questions=used_questions or [],
     )
 
     question = await chat_completion(
