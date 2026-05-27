@@ -1,13 +1,16 @@
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Easing
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Animated, Easing,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-
 import { useThemeStore } from '../../store/useThemeStore';
 import { useSessionStore } from '../../store/useSessionStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { sessionService } from '../../services/sessionService';
 import { Colors } from '../../constants/theme';
 
 const STAR_DIMS = [
@@ -58,6 +61,155 @@ const barStyles = StyleSheet.create({
   bg: { height: 6, borderRadius: 3, overflow: 'hidden', flex: 1 },
   fill: { height: '100%', borderRadius: 3 },
 });
+function LastSessionFeedback() {
+  const router = useRouter();
+  const { theme } = useThemeStore();
+  const { user } = useAuthStore();
+  const isDark = theme === 'dark';
+  const c = isDark ? Colors.dark : Colors.light;
+
+  const [lastSession, setLastSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLastSession();
+  }, []);
+
+  const fetchLastSession = async () => {
+    try {
+      const sessions = await sessionService.getHistory(
+        user?.id || 'anonymous'
+      );
+      if (sessions && sessions.length > 0) {
+        setLastSession(sessions[0]);
+      }
+    } catch (err) {
+      console.log('Last session fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.empty}>
+        <ActivityIndicator color={Colors.indigo.DEFAULT} />
+      </View>
+    );
+  }
+
+  if (!lastSession) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyEmoji}>📊</Text>
+        <Text style={[styles.emptyTitle, { color: c.text }]}>
+          No feedback yet
+        </Text>
+        <Text style={[styles.emptySub, { color: c.text2 }]}>
+          Complete your first practice session to see feedback here.
+        </Text>
+        <TouchableOpacity
+          style={[styles.homeBtn, { backgroundColor: Colors.indigo.DEFAULT }]}
+          onPress={() => router.replace('/(tabs)')}
+        >
+          <Text style={styles.homeBtnText}>Start Practicing</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const scoreColor =
+    (lastSession.avg_score || 0) >= 4 ? '#2ECC9A' :
+    (lastSession.avg_score || 0) >= 3 ? Colors.terra.DEFAULT :
+    Colors.indigo.light;
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scroll}
+    >
+      {/* Header */}
+      <Text style={[styles.headerTitle, { color: c.text }]}>
+        Feedback
+      </Text>
+      <Text style={[styles.headerSub, { color: c.text3 }]}>
+        Last session
+      </Text>
+
+      {/* Last session summary card */}
+      <View style={[styles.scoreCard, {
+        backgroundColor: c.surf, borderColor: c.border
+      }]}>
+        <View style={styles.scoreTop}>
+          <View>
+            <Text style={styles.bigScore}>
+              {lastSession.avg_score?.toFixed(1) || '—'}
+            </Text>
+            <Text style={[styles.scoreOutOf, { color: c.text3 }]}>
+              avg score
+            </Text>
+          </View>
+          <View style={[styles.scoreBadge, {
+            backgroundColor: isDark ? '#1A2820' : '#E8F5EE',
+            borderColor: scoreColor,
+          }]}>
+            <Text style={[styles.scoreBadgeText, { color: scoreColor }]}>
+              {(lastSession.avg_score || 0) >= 4 ? 'Excellent' :
+               (lastSession.avg_score || 0) >= 3 ? 'Good effort' :
+               'Needs work'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Session info */}
+        <View style={[styles.questionRecap, {
+          backgroundColor: isDark ? Colors.indigo.dim : '#EDE9F8'
+        }]}>
+          <Text style={[styles.questionRecapLabel, {
+            color: isDark ? Colors.lavender : Colors.indigo.DEFAULT
+          }]}>
+            ⬡ Session details
+          </Text>
+          <Text style={[styles.questionRecapText, {
+            color: isDark ? Colors.lavender : Colors.indigo.DEFAULT
+          }]}>
+            {lastSession.seniority} {lastSession.target_role} ·{' '}
+            {lastSession.total_questions} questions ·{' '}
+            {new Date(lastSession.created_at).toLocaleDateString('en-IN', {
+              day: 'numeric', month: 'short', year: 'numeric'
+            })}
+          </Text>
+        </View>
+      </View>
+
+      {/* View full report button */}
+      <TouchableOpacity
+        style={[styles.nextBtn, { backgroundColor: Colors.indigo.DEFAULT }]}
+        onPress={() => router.push({
+          pathname: '/session-detail',
+          params: { sessionId: lastSession.id }
+        })}
+      >
+        <Text style={styles.nextBtnText}>View Full Report →</Text>
+      </TouchableOpacity>
+
+      {/* Start new session */}
+      <TouchableOpacity
+        style={[styles.endBtn, {
+          backgroundColor: c.surf2,
+          borderColor: c.border,
+          marginTop: 8,
+        }]}
+        onPress={() => router.replace('/(tabs)')}
+      >
+        <Text style={[styles.endBtnText, { color: c.text2 }]}>
+          Start New Session
+        </Text>
+      </TouchableOpacity>
+
+    </ScrollView>
+  );
+}
 
 export default function FeedbackScreen() {
   const router = useRouter();
@@ -111,19 +263,7 @@ export default function FeedbackScreen() {
   if (!currentEvaluation) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: c.bg }]}>
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📊</Text>
-          <Text style={[styles.emptyTitle, { color: c.text }]}>No feedback yet</Text>
-          <Text style={[styles.emptySub, { color: c.text2 }]}>
-            Complete a session to see your STAR breakdown here.
-          </Text>
-          <TouchableOpacity
-            style={[styles.homeBtn, { backgroundColor: Colors.indigo.DEFAULT }]}
-            onPress={() => router.replace('/(tabs)')}
-          >
-            <Text style={styles.homeBtnText}>Go to Home</Text>
-          </TouchableOpacity>
-        </View>
+        <LastSessionFeedback />
       </SafeAreaView>
     );
   }
