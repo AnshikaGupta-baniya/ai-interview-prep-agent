@@ -8,7 +8,7 @@ _model = None
 def get_embedding_model() -> TextEmbedding:
     global _model
     if _model is None:
-        _model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        _model = TextEmbedding(model_name="fast-bge-small-en")
     return _model
 
 

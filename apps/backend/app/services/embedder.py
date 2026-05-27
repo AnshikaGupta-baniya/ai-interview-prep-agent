@@ -17,7 +17,7 @@ def get_embedding_model() -> TextEmbedding:
     if _model is None:
         print("Loading FastEmbed model...")
         _model = TextEmbedding(
-            model_name="BAAI/bge-small-en-v1.5"  # only 33MB
+            model_name="fast-bge-small-en"  # only 23MB
         )
         print("FastEmbed model ready.")
     return _model
