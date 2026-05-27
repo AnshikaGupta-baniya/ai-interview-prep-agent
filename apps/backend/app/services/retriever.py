@@ -1,25 +1,5 @@
-import asyncio
-from fastembed import TextEmbedding
+from app.core.embeddings import get_embedding
 from app.db.chroma import get_or_create_collection
-
-_model = None
-
-
-def get_embedding_model() -> TextEmbedding:
-    global _model
-    if _model is None:
-        _model = TextEmbedding(model_name="fast-bge-small-en")
-    return _model
-
-
-async def get_local_embedding(text: str) -> list[float]:
-    loop = asyncio.get_event_loop()
-    model = get_embedding_model()
-    vector = await loop.run_in_executor(
-        None,
-        lambda: list(list(model.embed([text]))[0])
-    )
-    return vector
 
 
 async def retrieve_diverse_chunk(
@@ -28,7 +8,7 @@ async def retrieve_diverse_chunk(
     used_chunks: list,
     n_results: int = 10,
 ) -> str:
-    query_vector = await get_local_embedding(query)
+    query_vector = await get_embedding(query)
     collection = get_or_create_collection(resume_id)
 
     results = collection.query(
@@ -57,7 +37,7 @@ def _chunks_similar(chunk1: str, chunk2: str) -> bool:
 
 
 async def retrieve_top_chunk(resume_id: str, query: str) -> str:
-    query_vector = await get_local_embedding(query)
+    query_vector = await get_embedding(query)
     collection = get_or_create_collection(resume_id)
 
     results = collection.query(
@@ -82,5 +62,7 @@ def build_retrieval_query(
         "technical": "technical skills tools technologies implementation architecture",
         "situational": "problem solving decision making challenges outcomes results",
     }
-    keywords = type_keywords.get(question_type, "experience skills achievements")
+    keywords = type_keywords.get(
+        question_type, "experience skills achievements"
+    )
     return f"{target_role} {keywords}"

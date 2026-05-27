@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     openai_api_key: str = "none"
     embedding_model: str = "text-embedding-3-small"
 
+    # Jina AI Embeddings (free, no local model)
+    jina_api_key: str = "jina_637343fe3ee5404e83fa72ac2e6b6c3f2ooEuriUmT8AyRYtI0kIMIomRUCU"
+
     # Whisper
     whisper_model: str = "whisper-large-v3"
 

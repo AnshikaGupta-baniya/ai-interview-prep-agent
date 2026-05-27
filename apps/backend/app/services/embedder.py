@@ -1,40 +1,9 @@
 import tiktoken
 import uuid
-import asyncio
-from fastembed import TextEmbedding
+from app.core.embeddings import get_embedding
 from app.db.chroma import get_or_create_collection
 from app.models.resume import ParsedResume
 from app.config import get_settings
-
-# FastEmbed — lightweight quantized model
-# Uses ~50MB vs sentence-transformers ~500MB
-# Perfect for Render free tier
-_model = None
-
-
-def get_embedding_model() -> TextEmbedding:
-    global _model
-    if _model is None:
-        print("Loading FastEmbed model...")
-        _model = TextEmbedding(
-            model_name="fast-bge-small-en"  # only 23MB
-        )
-        print("FastEmbed model ready.")
-    return _model
-
-
-async def get_local_embedding(text: str) -> list[float]:
-    """
-    Runs FastEmbed in thread pool so it doesn't block FastAPI.
-    Returns 384-dimensional vector.
-    """
-    loop = asyncio.get_event_loop()
-    model = get_embedding_model()
-    vector = await loop.run_in_executor(
-        None,
-        lambda: list(list(model.embed([text]))[0])
-    )
-    return vector
 
 
 def chunk_resume(
@@ -109,7 +78,7 @@ async def embed_and_index(resume_id: str, parsed: ParsedResume) -> int:
 
     embeddings = []
     for chunk in chunks:
-        vector = await get_local_embedding(chunk["text"])
+        vector = await get_embedding(chunk["text"])
         embeddings.append(vector)
 
     collection.upsert(
