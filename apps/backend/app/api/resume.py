@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 
 from app.config import get_settings, Settings
 from app.services.resume_parser import extract_text, parse_resume
-#from app.services.embedder import embed_and_index
+from app.services.embedder import embed_and_index
 from app.db.supabase import get_supabase
 from app.models.resume import ResumeUploadResponse
 
@@ -55,7 +55,7 @@ async def upload_resume(
     parsed = await parse_resume(raw_text)
 
     # ── Embed + Index in ChromaDB ────────────────────────────────
-    chunk_count = 0
+    chunk_count = await embed_and_index(resume_id, parsed)
 
     # ── Save record to Supabase DB ───────────────────────────────
     created_at = datetime.now(timezone.utc)
