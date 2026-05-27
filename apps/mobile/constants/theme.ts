@@ -98,6 +98,7 @@ export const ROLES = [
   'UI Designer',
   'UX Researcher',
   'Design Lead',
+  'Product Analyst',
 
   // 📊 Business & Operations
   'Business Analyst',

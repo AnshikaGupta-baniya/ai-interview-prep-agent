@@ -210,7 +210,7 @@ export default function HomeScreen() {
                   { color: c.text2 },
                 ]}
               >
-                Good morning
+                All the Best!
               </Text>
 
               <Text

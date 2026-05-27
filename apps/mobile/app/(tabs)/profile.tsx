@@ -22,50 +22,35 @@ import { Colors } from '../../constants/theme';
 export default function ProfileScreen() {
   const router = useRouter();
 
-  // Theme Store
   const { theme } = useThemeStore();
-
-  // Resume Store
   const { resume, clearResume } = useResumeStore();
-
-  // Auth Store
   const { user, logout } = useAuthStore();
 
-  // Local State
   const [sessions, setSessions] = useState<any[]>([]);
+  const [showResume, setShowResume] = useState(false);
 
-  // Theme Helpers
   const isDark = theme === 'dark';
+  const c = isDark ? Colors.dark : Colors.light;
 
-  const c = isDark
-    ? Colors.dark
-    : Colors.light;
-
-  // Fetch session history
   useEffect(() => {
     sessionService
       .getHistory(user?.id || 'anonymous')
       .then(setSessions)
       .catch(console.log);
-  }, []);
+  }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert(
       'Log out',
       'Are you sure you want to log out?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Log out',
           style: 'destructive',
           onPress: async () => {
             clearResume();
-
             await logout();
-
             router.replace('/auth');
           },
         },
@@ -74,25 +59,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: c.bg },
-      ]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: c.bg }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-
-        {/* Header */}
-        <Text
-          style={[
-            styles.pageTitle,
-            { color: c.text },
-          ]}
-        >
+        <Text style={[styles.pageTitle, { color: c.text }]}>
           Profile
         </Text>
 
-        {/* User Card */}
         <View
           style={[
             styles.userCard,
@@ -105,33 +77,19 @@ export default function ProfileScreen() {
           <View
             style={[
               styles.avatar,
-              {
-                backgroundColor: Colors.indigo.DEFAULT,
-              },
+              { backgroundColor: Colors.indigo.DEFAULT },
             ]}
           >
-            <Text style={styles.avatarText}>
-              AG
-            </Text>
+            <Text style={styles.avatarText}>AG</Text>
           </View>
 
           <View style={styles.userInfo}>
-            <Text
-              style={[
-                styles.userName,
-                { color: c.text },
-              ]}
-            >
-              {resume?.parsed_json?.full_name || 'Anshika Gupta'}
+            <Text style={[styles.userName, { color: c.text }]}>
+              {user?.name || resume?.parsed_json?.full_name || 'Your Name'}
             </Text>
 
-            <Text
-              style={[
-                styles.userEmail,
-                { color: c.text2 },
-              ]}
-            >
-              {resume?.parsed_json?.email || 'anshika@example.com'}
+            <Text style={[styles.userEmail, { color: c.text2 }]}>
+              {user?.email || resume?.parsed_json?.email || 'your@email.com'}
             </Text>
 
             {resume && (
@@ -139,25 +97,16 @@ export default function ProfileScreen() {
                 style={[
                   styles.resumeTag,
                   {
-                    backgroundColor: isDark
-                      ? '#1A2C20'
-                      : '#E8F5EE',
+                    backgroundColor: isDark ? '#1A2C20' : '#E8F5EE',
                   },
                 ]}
               >
-                <Ionicons
-                  name="checkmark-circle"
-                  size={12}
-                  color="#4CAF7D"
-                />
-
+                <Ionicons name="checkmark-circle" size={12} color="#4CAF7D" />
                 <Text
                   style={[
                     styles.resumeTagText,
                     {
-                      color: isDark
-                        ? '#4CAF7D'
-                        : '#2E7D52',
+                      color: isDark ? '#4CAF7D' : '#2E7D52',
                     },
                   ]}
                 >
@@ -168,13 +117,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Preferences */}
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: c.text3 },
-          ]}
-        >
+        <Text style={[styles.sectionLabel, { color: c.text3 }]}>
           PREFERENCES
         </Text>
 
@@ -187,21 +130,15 @@ export default function ProfileScreen() {
             },
           ]}
         >
-
-          {/* Resume */}
           <TouchableOpacity
-            style={[
-              styles.row,
-              { borderBottomColor: c.border },
-            ]}
+            style={[styles.row, { borderBottomColor: c.border }]}
+            onPress={() => setShowResume(!showResume)}
           >
             <View
               style={[
                 styles.iconWrap,
                 {
-                  backgroundColor: isDark
-                    ? Colors.terra.dim
-                    : '#FBF0ED',
+                  backgroundColor: isDark ? Colors.terra.dim : '#FBF0ED',
                 },
               ]}
             >
@@ -212,28 +149,221 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <Text
-              style={[
-                styles.rowLabel,
-                { color: c.text },
-              ]}
-            >
+            <Text style={[styles.rowLabel, { color: c.text }]}>
               My Resume
             </Text>
 
             <Ionicons
-              name="chevron-forward"
+              name={showResume ? 'chevron-up' : 'chevron-down'}
               size={16}
               color={c.text3}
             />
           </TouchableOpacity>
 
-          {/* Session History */}
+          {showResume && resume && (
+            <View
+              style={[
+                styles.resumeDetail,
+                {
+                  backgroundColor: isDark
+                    ? Colors.dark.surf2
+                    : Colors.light.surf2,
+                  borderTopColor: c.border,
+                },
+              ]}
+            >
+              <View style={styles.resumeRow}>
+                <Ionicons name="attach-outline" size={14} color={c.text3} />
+                <Text style={[styles.resumeLabel, { color: c.text2 }]}>
+                  File
+                </Text>
+                <Text style={[styles.resumeValue, { color: c.text }]}>
+                  {resume.parsed_json?.full_name || 'Resume'}
+                </Text>
+              </View>
+
+              <View style={styles.resumeRow}>
+                <Ionicons name="layers-outline" size={14} color={c.text3} />
+                <Text style={[styles.resumeLabel, { color: c.text2 }]}>
+                  Chunks
+                </Text>
+                <Text
+                  style={[
+                    styles.resumeValue,
+                    { color: Colors.terra.DEFAULT },
+                  ]}
+                >
+                  {resume.chunk_count} indexed
+                </Text>
+              </View>
+
+              {resume.parsed_json?.skills?.length > 0 && (
+                <View style={styles.resumeSkillsWrap}>
+                  <Text
+                    style={[
+                      styles.resumeLabel,
+                      { color: c.text2, marginBottom: 6 },
+                    ]}
+                  >
+                    Skills
+                  </Text>
+
+                  <View style={styles.skillsRow}>
+                    {resume.parsed_json.skills.slice(0, 8).map((skill: string) => (
+                      <View
+                        key={skill}
+                        style={[
+                          styles.skillPill,
+                          {
+                            backgroundColor: isDark
+                              ? Colors.indigo.dim
+                              : '#EDE9F8',
+                            borderColor: isDark ? '#3D3880' : '#C8C0F0',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.skillText,
+                            {
+                              color: isDark
+                                ? Colors.lavender
+                                : Colors.indigo.DEFAULT,
+                            },
+                          ]}
+                        >
+                          {skill}
+                        </Text>
+                      </View>
+                    ))}
+
+                    {resume.parsed_json.skills.length > 8 && (
+                      <View
+                        style={[
+                          styles.skillPill,
+                          {
+                            backgroundColor: isDark
+                              ? Colors.dark.surf2
+                              : Colors.light.surf2,
+                            borderColor: c.border,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.skillText, { color: c.text3 }]}>
+                          +{resume.parsed_json.skills.length - 8} more
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {resume.parsed_json?.work_experiences?.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <Text
+                    style={[
+                      styles.resumeLabel,
+                      { color: c.text2, marginBottom: 6 },
+                    ]}
+                  >
+                    Experience
+                  </Text>
+
+                  {resume.parsed_json.work_experiences.map((exp: any, i: number) => (
+                    <View
+                      key={`${exp.company}-${exp.role}-${i}`}
+                      style={[
+                        styles.expRow,
+                        { borderLeftColor: Colors.terra.DEFAULT },
+                      ]}
+                    >
+                      <Text style={[styles.expRole, { color: c.text }]}>
+                        {exp.role}
+                      </Text>
+                      <Text style={[styles.expCompany, { color: c.text2 }]}>
+                        {exp.company} · {exp.start_date || 'N/A'} —{' '}
+                        {exp.end_date || 'Present'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.reuploadBtn, { borderColor: c.border }]}
+                onPress={() =>
+                  Alert.alert(
+                    'Re-upload Resume',
+                    'Go to Home screen to upload a new resume.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Go to Home',
+                        onPress: () => router.replace('/(tabs)'),
+                      },
+                    ]
+                  )
+                }
+              >
+                <Ionicons name="cloud-upload-outline" size={14} color={c.text3} />
+                <Text style={[styles.reuploadText, { color: c.text3 }]}>
+                  Re-upload resume
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {showResume && !resume && (
+            <View
+              style={[
+                styles.resumeDetail,
+                {
+                  backgroundColor: isDark
+                    ? Colors.dark.surf2
+                    : Colors.light.surf2,
+                  borderTopColor: c.border,
+                  alignItems: 'center',
+                  padding: 20,
+                },
+              ]}
+            >
+              <Text style={{ color: c.text3, fontSize: 13, marginBottom: 12 }}>
+                No resume uploaded yet
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.reuploadBtn,
+                  {
+                    borderColor: Colors.indigo.DEFAULT,
+                    backgroundColor: isDark ? Colors.indigo.dim : '#EDE9F8',
+                  },
+                ]}
+                onPress={() => router.replace('/(tabs)')}
+              >
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={14}
+                  color={isDark ? Colors.lavender : Colors.indigo.DEFAULT}
+                />
+                <Text
+                  style={[
+                    styles.reuploadText,
+                    {
+                      color: isDark
+                        ? Colors.lavender
+                        : Colors.indigo.DEFAULT,
+                    },
+                  ]}
+                >
+                  Upload from Home
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TouchableOpacity
-            style={[
-              styles.row,
-              { borderBottomWidth: 0 },
-            ]}
+            style={[styles.row, { borderBottomWidth: 0 }]}
             onPress={() => {
               if (sessions.length > 0) {
                 router.push({
@@ -252,44 +382,22 @@ export default function ProfileScreen() {
               style={[
                 styles.iconWrap,
                 {
-                  backgroundColor: isDark
-                    ? '#1E2820'
-                    : '#E8F5EE',
+                  backgroundColor: isDark ? '#1E2820' : '#E8F5EE',
                 },
               ]}
             >
-              <Ionicons
-                name="time-outline"
-                size={18}
-                color="#4CAF7D"
-              />
+              <Ionicons name="time-outline" size={18} color="#4CAF7D" />
             </View>
 
-            <Text
-              style={[
-                styles.rowLabel,
-                { color: c.text },
-              ]}
-            >
+            <Text style={[styles.rowLabel, { color: c.text }]}>
               Session History
             </Text>
 
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={c.text3}
-            />
+            <Ionicons name="chevron-forward" size={16} color={c.text3} />
           </TouchableOpacity>
-
         </View>
 
-        {/* Account */}
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: c.text3 },
-          ]}
-        >
+        <Text style={[styles.sectionLabel, { color: c.text3 }]}>
           ACCOUNT
         </Text>
 
@@ -302,21 +410,12 @@ export default function ProfileScreen() {
             },
           ]}
         >
-
-          {/* Help */}
-          <TouchableOpacity
-            style={[
-              styles.row,
-              { borderBottomColor: c.border },
-            ]}
-          >
+          <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]}>
             <View
               style={[
                 styles.iconWrap,
                 {
-                  backgroundColor: isDark
-                    ? '#1E1B38'
-                    : '#EDE9F8',
+                  backgroundColor: isDark ? '#1E1B38' : '#EDE9F8',
                 },
               ]}
             >
@@ -327,38 +426,18 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <Text
-              style={[
-                styles.rowLabel,
-                { color: c.text },
-              ]}
-            >
+            <Text style={[styles.rowLabel, { color: c.text }]}>
               Help & Support
             </Text>
 
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={c.text3}
-            />
+            <Ionicons name="chevron-forward" size={16} color={c.text3} />
           </TouchableOpacity>
 
-          {/* Logout */}
           <TouchableOpacity
-            style={[
-              styles.row,
-              { borderBottomWidth: 0 },
-            ]}
+            style={[styles.row, { borderBottomWidth: 0 }]}
             onPress={handleLogout}
           >
-            <View
-              style={[
-                styles.iconWrap,
-                {
-                  backgroundColor: '#FBF0ED',
-                },
-              ]}
-            >
+            <View style={[styles.iconWrap, { backgroundColor: '#FBF0ED' }]}>
               <Ionicons
                 name="log-out-outline"
                 size={18}
@@ -369,30 +448,17 @@ export default function ProfileScreen() {
             <Text
               style={[
                 styles.rowLabel,
-                {
-                  color: Colors.terra.DEFAULT,
-                },
+                { color: Colors.terra.DEFAULT },
               ]}
             >
               Log out
             </Text>
 
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={c.text3}
-            />
+            <Ionicons name="chevron-forward" size={16} color={c.text3} />
           </TouchableOpacity>
-
         </View>
 
-        {/* Recent Sessions */}
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: c.text3 },
-          ]}
-        >
+        <Text style={[styles.sectionLabel, { color: c.text3 }]}>
           RECENT SESSIONS
         </Text>
 
@@ -406,18 +472,8 @@ export default function ProfileScreen() {
           ]}
         >
           {sessions.length === 0 ? (
-            <View
-              style={{
-                padding: 16,
-                alignItems: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  color: c.text3,
-                  fontSize: 13,
-                }}
-              >
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: c.text3, fontSize: 13 }}>
                 No sessions yet
               </Text>
             </View>
@@ -446,21 +502,12 @@ export default function ProfileScreen() {
                   <Ionicons
                     name="bar-chart-outline"
                     size={18}
-                    color={
-                      isDark
-                        ? Colors.lavender
-                        : Colors.indigo.DEFAULT
-                    }
+                    color={isDark ? Colors.lavender : Colors.indigo.DEFAULT}
                   />
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.rowLabel,
-                      { color: c.text },
-                    ]}
-                  >
+                  <Text style={[styles.rowLabel, { color: c.text }]}>
                     {session.seniority} {session.target_role}
                   </Text>
 
@@ -492,25 +539,16 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Version */}
-        <Text
-          style={[
-            styles.version,
-            { color: c.text3 },
-          ]}
-        >
+        <Text style={[styles.version, { color: c.text3 }]}>
           AI Interview Coach v1.0.0
         </Text>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
   pageTitle: {
     fontSize: 28,
@@ -519,6 +557,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 20,
   },
+  
 
   userCard: {
     flexDirection: 'row',
@@ -612,9 +651,87 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
+  resumeDetail: {
+    borderTopWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+
+  resumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  resumeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    width: 52,
+  },
+
+  resumeValue: {
+    flex: 1,
+    fontSize: 13,
+  
+  },
+
+  resumeSkillsWrap: {
+    marginTop: 4,
+  },
+
+  skillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  skillPill: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+
+  skillText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+
+  expRow: {
+    borderLeftWidth: 2,
+    paddingLeft: 10,
+    marginBottom: 8,
+  },
+
+  expRole: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  expCompany: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+
+  reuploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+
+  reuploadText: {
+    fontSize: 12,
+  },
+
   version: {
     textAlign: 'center',
     fontSize: 11,
     marginBottom: 32,
   },
+  
 });
