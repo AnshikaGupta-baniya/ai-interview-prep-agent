@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 import { sessionService } from '../../services/sessionService';
 import { Colors } from '../../constants/theme';
+import { SessionCardSkeleton } from '../../components/ui/Skeleton';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -27,16 +28,20 @@ export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
 
   const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showResume, setShowResume] = useState(false);
 
   const isDark = theme === 'dark';
   const c = isDark ? Colors.dark : Colors.light;
+  const [showAllSkills, setShowAllSkills] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     sessionService
       .getHistory(user?.id || 'anonymous')
       .then(setSessions)
-      .catch(console.log);
+      .catch(console.log)
+      .finally(() => setLoading(false));
   }, [user?.id]);
 
   const handleLogout = () => {
@@ -110,7 +115,7 @@ export default function ProfileScreen() {
                     },
                   ]}
                 >
-                  Resume uploaded · {resume.chunk_count} chunks
+                  Resume uploaded
                 </Text>
               </View>
             )}
@@ -182,21 +187,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
 
-              <View style={styles.resumeRow}>
-                <Ionicons name="layers-outline" size={14} color={c.text3} />
-                <Text style={[styles.resumeLabel, { color: c.text2 }]}>
-                  Chunks
-                </Text>
-                <Text
-                  style={[
-                    styles.resumeValue,
-                    { color: Colors.terra.DEFAULT },
-                  ]}
-                >
-                  {resume.chunk_count} indexed
-                </Text>
-              </View>
-
+              
               {resume.parsed_json?.skills?.length > 0 && (
                 <View style={styles.resumeSkillsWrap}>
                   <Text
@@ -209,7 +200,8 @@ export default function ProfileScreen() {
                   </Text>
 
                   <View style={styles.skillsRow}>
-                    {resume.parsed_json.skills.slice(0, 8).map((skill: string) => (
+                    {resume.parsed_json.skills.slice(0, showAllSkills ? resume.parsed_json.skills.length : 8)
+                    .map((skill: string) => (
                       <View
                         key={skill}
                         style={[
@@ -238,7 +230,7 @@ export default function ProfileScreen() {
                     ))}
 
                     {resume.parsed_json.skills.length > 8 && (
-                      <View
+                      <TouchableOpacity
                         style={[
                           styles.skillPill,
                           {
@@ -248,11 +240,16 @@ export default function ProfileScreen() {
                             borderColor: c.border,
                           },
                         ]}
+                        onPress={() => setShowAllSkills(!showAllSkills)}
                       >
                         <Text style={[styles.skillText, { color: c.text3 }]}>
-                          +{resume.parsed_json.skills.length - 8} more
+                          {showAllSkills
+                            ? 'Show less'
+                            : `+${resume.parsed_json.skills.length - 8} more`
+                          }
                         </Text>
-                      </View>
+                        </TouchableOpacity>
+                      
                     )}
                   </View>
                 </View>
@@ -471,7 +468,14 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          {sessions.length === 0 ? (
+          {loading ? (
+            <>
+            <SessionCardSkeleton />
+            <SessionCardSkeleton />
+            <SessionCardSkeleton />
+            </>
+          ) : sessions.length === 0 ? (
+            
             <View style={{ padding: 16, alignItems: 'center' }}>
               <Text style={{ color: c.text3, fontSize: 13 }}>
                 No sessions yet
@@ -666,7 +670,7 @@ const styles = StyleSheet.create({
   resumeLabel: {
     fontSize: 12,
     fontWeight: '600',
-    width: 52,
+    width: 80,
   },
 
   resumeValue: {

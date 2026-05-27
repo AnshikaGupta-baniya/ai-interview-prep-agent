@@ -20,7 +20,9 @@ import { useResumeStore } from '../../store/useResumeStore';
 import { useSessionStore } from '../../store/useSessionStore';
 
 import { resumeService } from '../../services/resumeService';
+import { useAuthStore } from '../../store/useAuthStore';
 import { sessionService } from '../../services/sessionService';
+
 
 import {
   Colors,
@@ -33,13 +35,15 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const { theme, toggleTheme } = useThemeStore();
+  const { user } = useAuthStore();
+
 
   const {
-    resume,
-    setResume,
-    setUploading,
-    isUploading,
-  } = useResumeStore();
+        resume,
+        setResume,
+        setUploading,
+        isUploading,
+        } = useResumeStore();
 
   const {
     targetRole,
@@ -85,6 +89,7 @@ export default function HomeScreen() {
       if (result.canceled) return;
 
       const file = result.assets[0];
+       
 
       setUploading(true);
 
@@ -94,11 +99,15 @@ export default function HomeScreen() {
         file.mimeType || 'application/pdf'
       );
 
+      const { theme, toggleTheme } = useThemeStore();
+      const { user } = useAuthStore();
+     
+
       setResume(uploaded);
 
       Alert.alert(
         'Resume uploaded',
-        `Parsed ${uploaded.chunk_count} experience chunks. Ready to practice!`
+        `Resume uploaded successfully. Ready to practice!`
       );
 
     } catch (err: any) {
@@ -219,7 +228,9 @@ export default function HomeScreen() {
                   { color: c.text },
                 ]}
               >
-                Anshika
+                {resume?.parsed_json?.full_name?.split(' ')[0] ||
+                user?.name?.split(' ')[0] ||
+                'User'}
               </Text>
 
             </View>

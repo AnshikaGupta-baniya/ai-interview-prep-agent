@@ -7,11 +7,17 @@ from app.services.resume_parser import extract_text, parse_resume
 from app.services.embedder import embed_and_index
 from app.db.supabase import get_supabase
 from app.models.resume import ResumeUploadResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from fastapi import Request
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 
 
 @router.post("/upload", response_model=ResumeUploadResponse)
+@limiter.limit("10/hour")
 async def upload_resume(
     file: UploadFile = File(...),
     user_id: str = Form(default="anonymous"),

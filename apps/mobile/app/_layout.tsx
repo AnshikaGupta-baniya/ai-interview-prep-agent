@@ -4,32 +4,44 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator } from 'react-native';
+
 import { useThemeStore } from '../store/useThemeStore';
 import { useAuthStore } from '../store/useAuthStore';
+
 import { Colors } from '../constants/theme';
+
+import { startKeepAlive } from '../services/keepAlive';
+
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { OfflineBanner } from '../components/ui/OfflineBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 2, staleTime: 1000 * 60 * 5 },
+    queries: {
+      retry: 2,
+      staleTime: 1000 * 60 * 5,
+    },
   },
 });
 
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
+
   const { user, isLoading, checkFirstLaunch } = useAuthStore();
+
   const { theme, loadTheme } = useThemeStore();
 
   useEffect(() => {
     loadTheme();
     checkFirstLaunch();
+    startKeepAlive();
   }, []);
 
   useEffect(() => {
     if (isLoading) return;
 
     const inAuthScreen = segments[0] === 'auth';
-    const inTabs = segments[0] === '(tabs)';
 
     if (!user && !inAuthScreen) {
       router.replace('/auth');
@@ -40,12 +52,17 @@ function AuthGate() {
 
   if (isLoading) {
     return (
-      <View style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme === 'dark' ? Colors.dark.bg : Colors.light.bg,
-      }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor:
+            theme === 'dark'
+              ? Colors.dark.bg
+              : Colors.light.bg,
+        }}
+      >
         <ActivityIndicator
           color={Colors.indigo.DEFAULT}
           size="large"
@@ -61,15 +78,28 @@ export default function RootLayout() {
   const { theme } = useThemeStore();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-        <AuthGate />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+
+          <StatusBar
+            style={theme === 'dark' ? 'light' : 'dark'}
+          />
+
+          <AuthGate />
+
+          <>
+            <OfflineBanner />
+
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="auth" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="session-detail" />
+            </Stack>
+          </>
+
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
