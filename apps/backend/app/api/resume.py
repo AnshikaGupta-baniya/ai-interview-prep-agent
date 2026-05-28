@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form, Request
 
 from app.config import get_settings, Settings
 from app.services.resume_parser import extract_text, parse_resume
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/resume", tags=["Resume"])
 @router.post("/upload", response_model=ResumeUploadResponse)
 @limiter.limit("10/hour")
 async def upload_resume(
+    request: Request,
     file: UploadFile = File(...),
     user_id: str = Form(default="anonymous"),
     settings: Settings = Depends(get_settings),
