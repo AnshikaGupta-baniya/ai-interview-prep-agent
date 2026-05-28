@@ -63,4 +63,10 @@ async def parse_resume(raw_text: str) -> ParsedResume:
     )
 
     data = json.loads(raw_json)
+
+    for exp in data.get("work_experiences", []):
+        exp["responsibilities"] = exp.get("responsibilities") or []
+        exp["achievements"] = exp.get("achievements") or []
+        exp["technologies"] = exp.get("technologies") or []
+        
     return ParsedResume(**data)
