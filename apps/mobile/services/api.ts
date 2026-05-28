@@ -1,23 +1,28 @@
 import axios from 'axios';
 
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://interview-prep-agent-cmle.onrender.com/api/v1';
+
 const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL,
+  baseURL: API_URL,
   timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',  // ← this skips ngrok's HTML warning page
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
 api.interceptors.request.use((config) => {
-  if (__DEV__) console.log('API Request:', config.method?.toUpperCase(), config.url);
+  console.log('API Base URL:', API_URL);
+  console.log('API Request:', config.method?.toUpperCase(), config.url);
   return config;
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (__DEV__) console.error('API Error:', err.response?.data || err.message);
+    console.error('API Error:', err.response?.data || err.message);
     return Promise.reject(err);
   }
 );

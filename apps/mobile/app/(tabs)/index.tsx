@@ -99,8 +99,7 @@ export default function HomeScreen() {
         file.mimeType || 'application/pdf'
       );
 
-      const { theme, toggleTheme } = useThemeStore();
-      const { user } = useAuthStore();
+     
      
 
       setResume(uploaded);
@@ -228,9 +227,9 @@ export default function HomeScreen() {
                   { color: c.text },
                 ]}
               >
-                {resume?.parsed_json?.full_name?.split(' ')[0] ||
-                user?.name?.split(' ')[0] ||
-                'User'}
+                {user?.name || 'User'}
+                
+                
               </Text>
 
             </View>

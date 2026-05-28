@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "AI Interview Coach",
-    "slug": "ai-interview-coach",
+    "name": "YourNext",
+    "slug": "yournext",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "interview-coach",
+    "scheme": "YourNext",
     "userInterfaceStyle": "automatic",
     "plugins": [
       "expo-router",
       [
         "expo-av",
         {
-          "microphonePermission": "Allow AI Interview Coach to access your microphone for recording answers."
+          "microphonePermission": "Allow YourNext to access your microphone for recording answers."
         }
       ],
       [
@@ -23,16 +23,27 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourname.interviewcoach"
+      "bundleIdentifier": "com.yourname.yournext"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FAF8FC"
       },
-      "package": "com.yourname.interviewcoach"
+      "package": "com.yourname.yournext",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "962cee4e-5652-40f4-ab5c-2d6c772b729e"
+      }
+    },
+    "owner": "anshika_gupta_baniya"
   }
 }

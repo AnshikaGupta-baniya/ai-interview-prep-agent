@@ -82,10 +82,10 @@ export default function AuthScreen() {
           {/* Logo area */}
           <View style={styles.logoWrap}>
             <View style={[styles.logoCircle, { backgroundColor: Colors.indigo.DEFAULT }]}>
-              <Ionicons name="mic" size={40} color="#fff" />
+              <Ionicons name="trending-up-outline" size={40} color="#fff" />
             </View>
             <Text style={[styles.appName, { color: c.text }]}>
-              AI Interview Coach
+              YourNext
             </Text>
             <Text style={[styles.appTagline, { color: c.text2 }]}>
               Practice interviews personalised{'\n'}to your actual resume experience.

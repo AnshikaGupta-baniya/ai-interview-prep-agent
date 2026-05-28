@@ -8,7 +8,7 @@ export const startKeepAlive = () => {
 
   intervalId = setInterval(async () => {
     try {
-      await api.get('/ping');
+      await api.get('/health');
       if (__DEV__) console.log('Keep-alive ping sent');
     } catch (err) {
       if (__DEV__) console.log('Keep-alive ping failed:', err);
@@ -16,7 +16,7 @@ export const startKeepAlive = () => {
   }, 10 * 60 * 1000); // 10 minutes
 
   // Also ping immediately on start
-  api.get('/ping').catch(() => {});
+  api.get('/health').catch(() => {});
 };
 
 export const stopKeepAlive = () => {
