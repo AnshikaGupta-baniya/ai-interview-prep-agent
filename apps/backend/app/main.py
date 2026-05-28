@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from app.config import get_settings
 from app.api import health, resume, session, question, answer
-from slowapi import _rate_limit_exceeded_handler
-#from slowapi import Limiter
-#from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+from app.api.resume import limiter
 
 app = FastAPI(
     title="AI Interview Prep Agent",
@@ -16,13 +16,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-#limiter = Limiter(key_func=get_remote_address)
+# Attach shared limiter
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler
+)
 
 settings = get_settings()
-
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,4 +45,6 @@ app.include_router(answer.router, prefix=PREFIX)
 @app.on_event("startup")
 async def startup():
     print(f"Environment: {settings.environment}")
-    print(f"Swagger UI: http://localhost:8000/docs")
+    print("Backend started successfully")
+    print("Swagger UI available at /docs")
+    
