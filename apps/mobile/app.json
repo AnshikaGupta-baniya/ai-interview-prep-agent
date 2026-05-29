@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "YourNext",
-    "slug": "yournext",
+    "name": "PrepAI",
+    "slug": "prepai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "YourNext",
+    "scheme": "prepai",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "jsEngine": "hermes",
     "plugins": [
       "expo-router",
       [
         "expo-av",
         {
-          "microphonePermission": "Allow YourNext to access your microphone for recording answers."
+          "microphonePermission": "Allow PrepAI to access your microphone for recording answers."
         }
       ],
       [
@@ -23,14 +25,20 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourname.yournext"
+      "bundleIdentifier": "com.yourname.prepai"
     },
     "android": {
+      "package": "com.yourname.prepai",
       "adaptiveIcon": {
-        "backgroundColor": "#FAF8FC"
+        "backgroundColor": "#16141E"
       },
-      "package": "com.yourname.yournext",
       "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
@@ -38,12 +46,17 @@
     "web": {
       "bundler": "metro"
     },
+    "updates": {
+      "url": "https://u.expo.dev/6eae0e98-b269-4660-b582-faeb0a6b4d3a"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "962cee4e-5652-40f4-ab5c-2d6c772b729e"
+        "projectId": "6eae0e98-b269-4660-b582-faeb0a6b4d3a"
       }
-    },
-    "owner": "anshika_gupta_baniya"
+    }
   }
 }
