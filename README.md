@@ -195,11 +195,11 @@ to generate structured feedback and coaching recommendations.
 Traditional LLM-based interview systems generate generic questions.
 
 Example:
- # "What are joins in SQL?"
+ ### "What are joins in SQL?"
 
 YourNext instead retrieves relevant resume experience and generates contextual questions such as:
 
-# "You automated QA workflows reducing manual effort by 90%. Walk me through the architecture, trade-offs, and challenges involved."
+### "You automated QA workflows reducing manual effort by 90%. Walk me through the architecture, trade-offs, and challenges involved."
 
 Benefits:
 - Higher personalization
